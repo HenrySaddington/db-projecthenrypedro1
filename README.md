@@ -73,7 +73,7 @@ chmod +x post-merge
 2.  Konsole schliessen
 3.  Im Menü auf *Files*
 4.  In den Ordner *mysite/.git/hooks* navigieren (Ordnerstruktur links)
-5.  File *post-merge* (rechts) öffnen, folgenden Inhalt einfügen und speichern (Save): (Achtung Username ist Case-Sensitive)
+5.  File *post-merge* (rechts) öffnen, folgenden Inhalt einfügen und speichern (Save)
 ```bash
 #!/bin/bash
 touch /var/www/<username_pythonanywhere>_pythonanywhere_com_wsgi.py

@@ -1,1 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:900px;margin:20px auto;">
+  <h1>Ball Bingo</h1>
+
+  <a href="{{ url_for('start_game') }}">
+    <button style="padding:10px 14px;">Start Game</button>
+  </a>
+
+  {% if not game %}
+    <p style="margin-top:10px;">Klicke auf Start Game, um zu beginnen.</p>
+  {% else %}
+
+    {% if game.lost %}
+      <h3 style="color:#c92a2a;margin-top:15px;">Verloren!</h3>
+    {% elif game.won %}
+      <h3 style="color:#2f9e44;margin-top:15px;">Gewonnen!</h3>
+    {% else %}
+      <p><b>Aktueller Spieler:</b> {{ current_player.name }}</p>
+    {% endif %}
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:15px;">
+      {% for cell in game.grid %}
+        <button
+          class="cell"
+          data-index="{{ loop.index0 }}"
+          style="
+            min-height:90px;
+            padding:10px;
+            border-radius:10px;
+            border:1px solid #333;
+            background:
+              {% if cell.state=='correct' %}#2f9e44
+              {% elif cell.state=='wrong' %}#c92a2a
+              {% else %}#222{% endif %};
+            color:white;
+            cursor:pointer;"
+          {% if cell.filled or game.lost or game.won %}disabled{% endif %}
+        >
+          {{ cell.fact }}
+        </button>
+      {% endfor %}
+    </div>
+
+  {% endif %}
+</div>
+
+<script>
+  async function clickCell(i){
+    const res = await fetch("{{ url_for('move') }}", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({cell_index: i})
+    });
+    const data = await res.json();
+    if(data.ok){
+      location.reload();
+    } else {
+      alert(data.message || "Fehler");
+    }
+  }
+
+  document.querySelectorAll(".cell").forEach(btn=>{
+    btn.addEventListener("click", ()=> clickCell(btn.dataset.index));
+  });
+</script>
+
+{% endblock %}
 

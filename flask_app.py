@@ -116,43 +116,80 @@ from db import get_random_players, get_player_facts, get_player_by_id
 
 
 def build_game():
-    # 1) 16 Spieler wählen
-    players = get_random_players(16)
-    if len(players) < 16:
-        raise ValueError("Not enough players in DB (need at least 16).")
+    """
+    Fair: In einem Game darf jeder Fact nur zu genau EINEM der 16 Spieler passen.
+    Lösung: Wir wählen erst viele Spieler (Pool), berechnen Facts, und nehmen nur Spieler,
+    die mindestens einen Fact haben, der im Pool exakt 1x vorkommt.
+    """
+    import random
 
-    player_ids = [p["id"] for p in players]
+    # Wie viele Spieler ziehen wir als Pool, um genug unique Facts zu finden?
+    POOL_SIZE = 80
+    TARGET = 16
+    MAX_TRIES = 30
 
-    # 2) Reihenfolge der Spieler (wer kommt wann dran)
-    deck = player_ids[:]
-    random.shuffle(deck)
+    for _ in range(MAX_TRIES):
+        pool_players = get_random_players(POOL_SIZE)
+        if len(pool_players) < TARGET:
+            raise ValueError("Not enough players in DB.")
 
-    # 3) Grid bauen: pro Spieler genau 1 Fakt
-    grid = []
-    for pid in player_ids:
-        facts = get_player_facts(pid)
-        if not facts:
-            # wenn Spieler keine Fakten hat -> neu bauen
-            return build_game()
+        # facts pro Spieler sammeln
+        pid_to_facts = {}
+        fact_to_pids = {}
 
-        fact = random.choice(facts)
+        for p in pool_players:
+            pid = p["id"]
+            facts = get_player_facts(pid) or []
+            pid_to_facts[pid] = facts
+            for f in facts:
+                fact_to_pids.setdefault(f, set()).add(pid)
 
-        grid.append({
-            "fact": fact,
-            "solution_player_id": pid,
-            "filled": False,
-            "state": "empty"   # empty | correct | wrong
-        })
+        # Facts, die im Pool genau 1x vorkommen => "unique"
+        unique_facts = {f for f, pids in fact_to_pids.items() if len(pids) == 1}
 
-    random.shuffle(grid)
+        # Spieler filtern: nur Spieler, die mind. 1 unique fact haben
+        candidates = []
+        for p in pool_players:
+            pid = p["id"]
+            uf = [f for f in pid_to_facts[pid] if f in unique_facts]
+            if uf:
+                candidates.append((pid, uf))
 
-    return {
-        "grid": grid,
-        "deck": deck,
-        "deck_index": 0,
-        "lost": False,
-        "won": False
-    }
+        if len(candidates) < TARGET:
+            continue  # nochmal versuchen
+
+        # 16 Spieler auswählen (optional: welche mit vielen unique facts bevorzugen)
+        candidates.sort(key=lambda x: len(x[1]), reverse=True)
+        chosen = candidates[:TARGET]
+
+        # Grid bauen: pro Spieler genau 1 unique fact (dadurch automatisch eindeutig)
+        grid = []
+        player_ids = []
+        for pid, ufacts in chosen:
+            fact = random.choice(ufacts)
+            grid.append({
+                "fact": fact,
+                "solution_player_id": pid,
+                "filled": False,
+                "state": "empty"
+            })
+            player_ids.append(pid)
+
+        random.shuffle(grid)
+
+        deck = player_ids[:]
+        random.shuffle(deck)
+
+        return {
+            "grid": grid,
+            "deck": deck,
+            "deck_index": 0,
+            "lost": False,
+            "won": False
+        }
+
+    raise ValueError("Could not build a fair game (not enough unique facts). Add more data or increase POOL_SIZE.")
+
 
 
 # -------------------------

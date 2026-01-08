@@ -79,6 +79,7 @@ def get_player_by_id(player_id):
 def get_player_facts(player_id):
     facts = []
 
+    # nationality + position
     row = db_read(
         "SELECT nationality, position FROM players WHERE id=%s",
         (player_id,),
@@ -91,27 +92,44 @@ def get_player_facts(player_id):
         if row.get("position"):
             facts.append(f"Position: {row['position']}")
 
-    # OPTIONAL: nur wenn ihr diese Tabellen habt!
-    # clubs
+    # clubs (mit Jahren, damit es öfter eindeutig ist)
     club_rows = db_read("""
-        SELECT c.name AS club_name
+        SELECT c.name AS club_name, pc.from_year, pc.to_year
         FROM player_clubs pc
         JOIN clubs c ON c.id = pc.club_id
         WHERE pc.player_id = %s
-        LIMIT 5
+        LIMIT 10
     """, (player_id,))
-    for r in club_rows:
-        facts.append(f"Played for: {r['club_name']}")
 
-    # titles
+    for r in club_rows:
+        name = r["club_name"]
+        fy = r.get("from_year")
+        ty = r.get("to_year")
+
+        if fy and ty:
+            facts.append(f"Played for: {name} ({fy}–{ty})")
+        elif fy and not ty:
+            facts.append(f"Played for: {name} (since {fy})")
+        else:
+            facts.append(f"Played for: {name}")
+
+    # titles (mit Jahr, damit es öfter eindeutig ist)
     title_rows = db_read("""
-        SELECT t.name AS title_name
+        SELECT t.name AS title_name, pt.year
         FROM player_titles pt
         JOIN titles t ON t.id = pt.title_id
         WHERE pt.player_id = %s
-        LIMIT 5
+        LIMIT 10
     """, (player_id,))
-    for r in title_rows:
-        facts.append(f"Won: {r['title_name']}")
 
+    for r in title_rows:
+        tname = r["title_name"]
+        year = r.get("year")
+        if year:
+            facts.append(f"Won: {tname} ({year})")
+        else:
+            facts.append(f"Won: {tname}")
+
+    # Duplikate entfernen, Reihenfolge behalten
+    facts = list(dict.fromkeys(facts))
     return facts

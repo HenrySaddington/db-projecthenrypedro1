@@ -108,27 +108,115 @@ def logout():
 
 
 
-# App routes
-@app.route("/", methods=["GET", "POST"])
+from flask import session, jsonify
+import random
+
+# Ball Bingo helpers aus db.py
+from db import get_random_players, get_player_facts, get_player_by_id
+
+
+def build_game():
+    # 1) 16 Spieler wählen
+    players = get_random_players(16)
+    if len(players) < 16:
+        raise ValueError("Not enough players in DB (need at least 16).")
+
+    player_ids = [p["id"] for p in players]
+
+    # 2) Reihenfolge der Spieler (wer kommt wann dran)
+    deck = player_ids[:]
+    random.shuffle(deck)
+
+    # 3) Grid bauen: pro Spieler genau 1 Fakt
+    grid = []
+    for pid in player_ids:
+        facts = get_player_facts(pid)
+        if not facts:
+            # wenn Spieler keine Fakten hat -> neu bauen
+            return build_game()
+
+        fact = random.choice(facts)
+
+        grid.append({
+            "fact": fact,
+            "solution_player_id": pid,
+            "filled": False,
+            "state": "empty"   # empty | correct | wrong
+        })
+
+    random.shuffle(grid)
+
+    return {
+        "grid": grid,
+        "deck": deck,
+        "deck_index": 0,
+        "lost": False,
+        "won": False
+    }
+
+
+# -------------------------
+# Ball Bingo Routes
+# -------------------------
+
+@app.route("/", methods=["GET"])
 @login_required
 def index():
-    # GET
-    if request.method == "GET":
-        todos = db_read("SELECT id, content, due FROM todos WHERE user_id=%s ORDER BY due", (current_user.id,))
-        return render_template("main_page.html", todos=todos)
+    game = session.get("game")
 
-    # POST
-    content = request.form["contents"]
-    due = request.form["due_at"]
-    db_write("INSERT INTO todos (user_id, content, due) VALUES (%s, %s, %s)", (current_user.id, content, due, ))
-    return redirect(url_for("index"))
+    current_player = None
+    if game and not game["lost"] and not game["won"]:
+        current_id = game["deck"][game["deck_index"]]
+        current_player = get_player_by_id(current_id)
 
-@app.post("/complete")
+    return render_template("index.html", game=game, current_player=current_player)
+
+
+@app.route("/start", methods=["GET"])
 @login_required
-def complete():
-    todo_id = request.form.get("id")
-    db_write("DELETE FROM todos WHERE user_id=%s AND id=%s", (current_user.id, todo_id,))
+def start_game():
+    session["game"] = build_game()
     return redirect(url_for("index"))
 
-if __name__ == "__main__":
-    app.run()
+
+@app.route("/move", methods=["POST"])
+@login_required
+def move():
+    game = session.get("game")
+    if not game:
+        return jsonify({"ok": False, "message": "No game. Press Start Game."})
+
+    if game["lost"] or game["won"]:
+        return jsonify({"ok": False, "message": "Game finished. Press Start Game."})
+
+    data = request.get_json(force=True)
+    cell_index = int(data["cell_index"])
+
+    # Feld schon gesetzt?
+    cell = game["grid"][cell_index]
+    if cell["filled"]:
+        return jsonify({"ok": False, "message": "Cell already filled."})
+
+    # aktueller Spieler
+    current_player_id = game["deck"][game["deck_index"]]
+
+    # Check
+    if current_player_id != cell["solution_player_id"]:
+        cell["filled"] = True
+        cell["state"] = "wrong"
+        game["lost"] = True
+        session["game"] = game
+        return jsonify({"ok": True, "correct": False, "lost": True})
+
+    # korrekt
+    cell["filled"] = True
+    cell["state"] = "correct"
+    game["deck_index"] += 1
+
+    # gewonnen?
+    if game["deck_index"] >= len(game["deck"]):
+        game["won"] = True
+
+    session["game"] = game
+    return jsonify({"ok": True, "correct": True, "won": game["won"], "lost": False})
+

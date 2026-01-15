@@ -276,8 +276,8 @@ if time.time() > game.get("turn_deadline", 0):
     cell["state"] = "correct"
     game["deck_index"] += 1
    
-# TIMER RESET: neue 20 Sekunden für nächsten Zug
-game["turn_deadline"] = time.time() + 20
+    # TIMER RESET: neue 20 Sekunden für nächsten Zug
+    game["turn_deadline"] = time.time() + 20
 
 
     # gewonnen?

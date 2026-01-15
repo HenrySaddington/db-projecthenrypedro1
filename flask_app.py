@@ -8,6 +8,7 @@ from db import db_read, db_write
 from auth import login_manager, authenticate, register_user
 from flask_login import login_user, logout_user, login_required, current_user
 import logging
+import time
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -180,12 +181,14 @@ def build_game():
         deck = player_ids[:]
         random.shuffle(deck)
 
-        return {
-            "grid": grid,
-            "deck": deck,
-            "deck_index": 0,
-            "lost": False,
-            "won": False
+       return {
+"grid": grid,
+"deck": deck,
+"deck_index": 0,
+"lost": False,
+"won": False,
+# TIMER: 20 Sekunden pro Lug
+"turn_deadline": time.time () + 20
         }
 
     raise ValueError("Could not build a fair game (not enough unique facts). Add more data or increase POOL_SIZE.")
@@ -206,7 +209,17 @@ def index():
         current_id = game["deck"][game["deck_index"]]
         current_player = get_player_by_id(current_id)
 
-    return render_template("index.html", game=game, current_player=current_player)
+    remaining = None
+if game and not game.get("lost") and not game.get("won"):
+    remaining = max(0, int(game.get("turn_deadline", 0) - time.time()))
+
+return render_template(
+    "index.html",
+    game=game,
+    current_player=current_player,
+    remaining=remaining
+)
+
 
 
 @app.route("/start", methods=["GET"])
@@ -225,6 +238,17 @@ def move():
 
     if game["lost"] or game["won"]:
         return jsonify({"ok": False, "message": "Game finished. Press Start Game."})
+
+# TIMER: Zeit abgelaufen?
+if time.time() > game.get("turn_deadline", 0):
+    game["lost"] = True
+    session["game"] = game
+    return jsonify({
+        "ok": True,
+        "lost": True,
+        "timeout": True
+    })
+
 
     data = request.get_json(force=True)
     cell_index = int(data["cell_index"])
@@ -249,6 +273,10 @@ def move():
     cell["filled"] = True
     cell["state"] = "correct"
     game["deck_index"] += 1
+   
+# TIMER RESET: neue 20 Sekunden für nächsten Zug
+game["turn_deadline"] = time.time() + 20
+
 
     # gewonnen?
     if game["deck_index"] >= len(game["deck"]):

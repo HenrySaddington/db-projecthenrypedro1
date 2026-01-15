@@ -115,16 +115,14 @@ import random
 # Ball Bingo helpers aus db.py
 from db import get_random_players, get_player_facts, get_player_by_id
 
-
 def build_game():
     """
     Fair: In einem Game darf jeder Fact nur zu genau EINEM der 16 Spieler passen.
-    Lösung: Wir wählen erst viele Spieler (Pool), berechnen Facts, und nehmen nur Spieler,
-    die mindestens einen Fact haben, der im Pool exakt 1x vorkommt.
+    Lösung: Wir ziehen einen Pool an Spielern, sammeln alle Facts, und nehmen nur Spieler,
+    die mindestens einen Fact haben, der im Pool exakt 1x vorkommt (unique Fact).
+    Dann bekommt jeder Spieler genau 1 solchen unique Fact als Bingo-Feld.
     """
-    import random
 
-    # Wie viele Spieler ziehen wir als Pool, um genug unique Facts zu finden?
     POOL_SIZE = 80
     TARGET = 16
     MAX_TRIES = 30
@@ -134,7 +132,7 @@ def build_game():
         if len(pool_players) < TARGET:
             raise ValueError("Not enough players in DB.")
 
-        # facts pro Spieler sammeln
+        # facts pro Spieler sammeln + mapping fact -> spieler
         pid_to_facts = {}
         fact_to_pids = {}
 
@@ -142,37 +140,41 @@ def build_game():
             pid = p["id"]
             facts = get_player_facts(pid) or []
             pid_to_facts[pid] = facts
-            for f in facts:
-                fact_to_pids.setdefault(f, set()).add(pid)
 
-        # Facts, die im Pool genau 1x vorkommen => "unique"
+            for f in facts:
+                if f not in fact_to_pids:
+                    fact_to_pids[f] = set()
+                fact_to_pids[f].add(pid)
+
+        # Facts, die im Pool genau 1x vorkommen => unique
         unique_facts = {f for f, pids in fact_to_pids.items() if len(pids) == 1}
 
-        # Spieler filtern: nur Spieler, die mind. 1 unique fact haben
+        # Kandidaten: Spieler, die mind. 1 unique fact haben
         candidates = []
         for p in pool_players:
             pid = p["id"]
-            uf = [f for f in pid_to_facts[pid] if f in unique_facts]
-            if uf:
-                candidates.append((pid, uf))
+            ufacts = [f for f in pid_to_facts[pid] if f in unique_facts]
+            if ufacts:
+                candidates.append((pid, ufacts))
 
         if len(candidates) < TARGET:
             continue  # nochmal versuchen
 
-        # 16 Spieler auswählen (optional: welche mit vielen unique facts bevorzugen)
+        # optional: welche mit vielen unique facts bevorzugen
         candidates.sort(key=lambda x: len(x[1]), reverse=True)
         chosen = candidates[:TARGET]
 
-        # Grid bauen: pro Spieler genau 1 unique fact (dadurch automatisch eindeutig)
+        # Grid: pro Spieler genau 1 unique fact
         grid = []
         player_ids = []
+
         for pid, ufacts in chosen:
             fact = random.choice(ufacts)
             grid.append({
                 "fact": fact,
                 "solution_player_id": pid,
                 "filled": False,
-                "state": "empty"
+                "state": "empty"   # empty | correct | wrong
             })
             player_ids.append(pid)
 
@@ -181,14 +183,18 @@ def build_game():
         deck = player_ids[:]
         random.shuffle(deck)
 
-           return {
-        "grid": grid,
-        "deck": deck,
-        "deck_index": 0,
-        "lost": False,
-        "won": False,
-        "turn_deadline": time.time() + 20
-    }
+        return {
+            "grid": grid,
+            "deck": deck,
+            "deck_index": 0,
+            "lost": False,
+            "won": False,
+            "turn_deadline": time.time() + 20
+        }
+
+    raise ValueError("Could not build a fair game. Add more players/facts to DB.")
+
+
 
 
 # -------------------------

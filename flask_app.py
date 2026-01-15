@@ -181,18 +181,14 @@ def build_game():
         deck = player_ids[:]
         random.shuffle(deck)
 
-       return {
-"grid": grid,
-"deck": deck,
-"deck_index": 0,
-"lost": False,
-"won": False,
-# TIMER: 20 Sekunden pro Lug
-"turn_deadline": time.time () + 20
-        }
-
-    raise ValueError("Could not build a fair game (not enough unique facts). Add more data or increase POOL_SIZE.")
-
+           return {
+        "grid": grid,
+        "deck": deck,
+        "deck_index": 0,
+        "lost": False,
+        "won": False,
+        "turn_deadline": time.time() + 20
+    }
 
 
 # -------------------------

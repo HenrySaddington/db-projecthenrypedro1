@@ -203,6 +203,7 @@ def build_game():
 
 @app.route("/", methods=["GET"])
 @login_required
+
 def index():
     game = session.get("game")
 
@@ -212,15 +213,16 @@ def index():
         current_player = get_player_by_id(current_id)
 
     remaining = None
-if game and not game.get("lost") and not game.get("won"):
-    remaining = max(0, int(game.get("turn_deadline", 0) - time.time()))
+    if game and not game.get("lost") and not game.get("won"):
+        remaining = max(0, int(game.get("turn_deadline", 0) - time.time()))
 
-return render_template(
-    "index.html",
-    game=game,
-    current_player=current_player,
-    remaining=remaining
-)
+    return render_template(
+        "index.html",
+        game=game,
+        current_player=current_player,
+        remaining=remaining
+    )
+
 
 
 
@@ -240,16 +242,16 @@ def move():
 
     if game["lost"] or game["won"]:
         return jsonify({"ok": False, "message": "Game finished. Press Start Game."})
-
-# TIMER: Zeit abgelaufen?
-if time.time() > game.get("turn_deadline", 0):
-    game["lost"] = True
-    session["game"] = game
-    return jsonify({
-        "ok": True,
-        "lost": True,
-        "timeout": True
-    })
+        
+    # TIMER: Zeit abgelaufen?
+    if time.time() > game.get("turn_deadline", 0):
+        game["lost"] = True
+        session["game"] = game
+        return jsonify({
+            "ok": True,
+            "lost": True,
+            "timeout": True
+        })
 
 
     data = request.get_json(force=True)

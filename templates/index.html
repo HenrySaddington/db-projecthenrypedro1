@@ -61,6 +61,7 @@
   {% endif %}
 </div>
 
+# line 67: sendet Zug an Server ohne seite neu zu laden
 <script>
   async function clickCell(i){
     const res = await fetch("{{ url_for('move') }}", {
@@ -80,7 +81,11 @@
     btn.addEventListener("click", ()=> clickCell(btn.dataset.index));
   });
 </script>
+# line 80: verbindet jede spielfeldtaste mit clickCell()-Funktion
 
+
+# line 90: übergibt Zeit-Daten direkt an JavaScript
+# line 93: ein laufender Countdown
 <script>
   let remaining = {{ remaining if remaining is not none else 'null' }};
   const el = document.getElementById("timerValue");

@@ -14,8 +14,6 @@
 </div>
 {% endif %}
 
-
-
 <div style="max-width:900px;margin:20px auto;">
   <h1>Ball Bingo</h1>
 
@@ -81,12 +79,13 @@
   });
 </script>
 
-
 <script>
   let remaining = {{ remaining if remaining is not none else 'null' }};
   const el = document.getElementById("timerValue");
 
   function tick() {
+    if (!el) return;
+
     if (remaining === null) {
       el.textContent = "--";
       return;
@@ -95,7 +94,6 @@
     el.textContent = remaining;
 
     if (remaining <= 0) {
-      // Server entscheidet final, wir reloaden nur die Ansicht
       location.reload();
       return;
     }
@@ -108,4 +106,5 @@
 </script>
 
 {% endblock %}
+
 

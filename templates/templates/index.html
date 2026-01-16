@@ -1,15 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
 
+{% if game and not game.lost and not game.won %}
 <div id="timerBox" style="
-    font-size: 32px;
-    font-weight: 600;
-    text-align: center;
-    margin: 12px 0;
-    color: #222;
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
+  margin: 10px 0 6px 0;
+  color: #222;
+  opacity: 0.85;
 ">
-    ⏱ <span id="timerValue">--</span>s
+  ⏱️ <span id="timerValue">--</span>s
 </div>
+{% endif %}
+
 
 
 <div style="max-width:900px;margin:20px auto;">
@@ -77,6 +81,7 @@
   });
 </script>
 
+
 <script>
   let remaining = {{ remaining if remaining is not none else 'null' }};
   const el = document.getElementById("timerValue");
@@ -101,7 +106,6 @@
 
   tick();
 </script>
-
 
 {% endblock %}
 

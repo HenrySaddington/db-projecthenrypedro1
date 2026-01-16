@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
+# steuert ob Timer angezeigt wird
 {% if game and not game.lost and not game.won %}
 <div id="timerBox" style="
   font-size: 28px;

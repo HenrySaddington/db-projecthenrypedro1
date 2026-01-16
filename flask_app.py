@@ -198,11 +198,7 @@ def build_game():
     raise ValueError("Could not build a fair game. Add more players/facts to DB.")
 
 
-
-
-# -------------------------
 # Ball Bingo Routes
-# -------------------------
 
 @app.route("/", methods=["GET"])
 @login_required

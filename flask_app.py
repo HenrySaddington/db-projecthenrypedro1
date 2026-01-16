@@ -185,6 +185,7 @@ def build_game():
         deck = player_ids[:]
         random.shuffle(deck)
 
+        # initialer Spielzustand
         return {
             "grid": grid,
             "deck": deck,

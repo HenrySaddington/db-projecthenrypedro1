@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-
-# steuert ob Timer angezeigt wird
+{#steuert ob Timer angezeigt wird#}
 {% if game and not game.lost and not game.won %}
 <div id="timerBox" style="
   font-size: 28px;
@@ -34,7 +33,7 @@
       <p><b>Aktueller Spieler:</b> {{ current_player.name }}</p>
     {% endif %}
 
-  # ändert farbe, wenn richtig oder falsch
+  {# ändert farbe, wenn richtig oder falsch#}
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:15px;">
       {% for cell in game.grid %}
         <button
@@ -61,7 +60,7 @@
   {% endif %}
 </div>
 
-# line 67: sendet Zug an Server ohne seite neu zu laden
+{# line 67: sendet Zug an Server ohne seite neu zu laden#}
 <script>
   async function clickCell(i){
     const res = await fetch("{{ url_for('move') }}", {
@@ -81,11 +80,11 @@
     btn.addEventListener("click", ()=> clickCell(btn.dataset.index));
   });
 </script>
-# line 80: verbindet jede spielfeldtaste mit clickCell()-Funktion
+{# line 80: verbindet jede spielfeldtaste mit clickCell()-Funktion#}
 
 
-# line 90: übergibt Zeit-Daten direkt an JavaScript
-# line 93: ein laufender Countdown
+{# line 90: übergibt Zeit-Daten direkt an JavaScript#}
+{# line 93: ein laufender Countdown#}
 <script>
   let remaining = {{ remaining if remaining is not none else 'null' }};
   const el = document.getElementById("timerValue");

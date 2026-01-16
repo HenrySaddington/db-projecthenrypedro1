@@ -1,3 +1,4 @@
+# importieren von benötigten Bibliotheken
 from flask import Flask, redirect, render_template, request, url_for
 from dotenv import load_dotenv
 import os
@@ -115,6 +116,7 @@ import random
 # Ball Bingo helpers aus db.py
 from db import get_random_players, get_player_facts, get_player_by_id
 
+# grid erstellen
 def build_game():
     """
     Fair: In einem Game darf jeder Fact nur zu genau EINEM der 16 Spieler passen.
@@ -204,6 +206,7 @@ def build_game():
 @app.route("/", methods=["GET"])
 @login_required
 
+# ladet aktueller Spielstand
 def index():
     game = session.get("game")
 

@@ -55,10 +55,8 @@ def db_write(sql, params=None):
         except:
             pass
         conn.close()
-        # -------------------------
+        
 # Ball Bingo: Queries/Helper
-# -------------------------
-
 def get_random_players(limit=16):
     sql = """
         SELECT id, name, nationality, position
